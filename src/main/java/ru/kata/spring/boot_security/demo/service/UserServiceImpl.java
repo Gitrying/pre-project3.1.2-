@@ -1,10 +1,9 @@
 package ru.kata.spring.boot_security.demo.service;
 
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.kata.spring.boot_security.demo.model.Role;
@@ -12,11 +11,9 @@ import ru.kata.spring.boot_security.demo.model.User;
 import ru.kata.spring.boot_security.demo.repository.RoleRepository;
 import ru.kata.spring.boot_security.demo.repository.UserRepository;
 
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -24,25 +21,29 @@ public class UserServiceImpl implements  UserService, UserDetailsService {
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public UserServiceImpl(UserRepository userRepository, RoleRepository roleRepository) {
+    public UserServiceImpl(UserRepository userRepository, RoleRepository roleRepository,PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
+    @Transactional(readOnly = true)
     public User userById(long id){
         return userRepository.findById(id).orElse(null);
     }
 
+    @Transactional(readOnly = true)
     public List<User> usersAll(){
         return userRepository.findAll();
     }
 
     @Transactional
-    public User userAdd(User user){
-        return userRepository.save(user);
+    public void userAdd(User user){
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        userRepository.save(user);
     }
-
     @Transactional
     public void userDelete(long id){userRepository.deleteById(id);}
 
@@ -50,17 +51,11 @@ public class UserServiceImpl implements  UserService, UserDetailsService {
     @Transactional(readOnly = true)
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         User user = findByUserEmail(email);
-        if(user == null){
-            throw new UsernameNotFoundException (String.format("User not found ", email));
+        if (user == null) {
+            throw new UsernameNotFoundException(String.format("user %s not found", email));
         }
-        return new org.springframework.security.core.userdetails.User(user.getEmail(), user.getPassword(),
-                mapRolesToAuthorities(user.getRoles()));
+        return user;
     }
-
-    private Collection<? extends GrantedAuthority> mapRolesToAuthorities(Collection<Role> roles) {
-        return roles.stream().map(role -> new SimpleGrantedAuthority(role.getName())).collect(Collectors.toList());
-    }
-
     @Override
     public Set<Role> getRoles(String[] roles){
         Set<Role> roleSet = new HashSet<>();
@@ -69,7 +64,7 @@ public class UserServiceImpl implements  UserService, UserDetailsService {
         }
         return roleSet;
     }
-
+    @Transactional(readOnly = true)
     public User findByUserEmail(String email) {
         return userRepository.findUserByEmail(email);
     }

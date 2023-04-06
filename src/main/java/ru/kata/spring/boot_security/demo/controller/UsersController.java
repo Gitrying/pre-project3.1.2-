@@ -2,32 +2,21 @@ package ru.kata.spring.boot_security.demo.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
-
-
 import ru.kata.spring.boot_security.demo.model.User;
-import ru.kata.spring.boot_security.demo.repository.UserRepository;
 import ru.kata.spring.boot_security.demo.service.UserService;
-
 import java.security.Principal;
 import java.util.List;
-
-
 
 @Controller
 public class UsersController {
     private final UserService userService;
-    private final PasswordEncoder passwordEncoder;
-
     @Autowired
-    public UsersController( UserService userService, PasswordEncoder passwordEncoder) {
+    public UsersController( UserService userService ) {
         this.userService = userService;
-        this.passwordEncoder = passwordEncoder;
     }
-
     @GetMapping("/user")
     public String userInfo(Model model, Principal principal) {
         User user = userService.findByUserEmail(principal.getName());
@@ -59,8 +48,6 @@ public class UsersController {
 
     @PostMapping("/admin/user-create")
     public String createUser(User user, @RequestParam(value = "role") String[] roles){
-        String password = passwordEncoder.encode(user.getPassword());
-        user.setPassword(password);
         user.setRoles(userService.getRoles(roles));
         userService.userAdd(user);
         return "redirect:/admin";
@@ -94,8 +81,6 @@ public class UsersController {
 
     @PostMapping("/admin/user-update")
     public String updateUser(User user, @RequestParam(value = "role") String[] roles){
-        String password = passwordEncoder.encode(user.getPassword());
-        user.setPassword(password);
         user.setRoles(userService.getRoles(roles));
         userService.userAdd(user);
         return "redirect:/admin";
